@@ -1,0 +1,23 @@
+﻿@model List<ListenLense.Models.WorkspaceModel>
+    @{
+        ViewData["Title"] = "ListenLense – Home";
+    }
+    <h1>ListenLense: Workspaces</h1>
+    
+    <ul>
+    @foreach (var ws in Model)
+    {
+        <li>
+            <a asp-controller="Workspace" asp-action="Index" asp-route-name="@ws.Name">
+                @ws.Name
+            </a>
+            (Last Accessed: @ws.LastAccessed)
+        </li>
+    }
+    </ul>
+    
+    <form method="post" asp-action="CreateWorkspace">
+        <input type="text" name="workspaceName" placeholder="New workspace name" />
+        <button type="submit">Create</button>
+    </form>
+    

@@ -1,0 +1,247 @@
+@model ListenLense.Models.WorkspaceFileModel
+
+@{
+    ViewData["Title"] = "Reader - " + Model.FileName;
+    var workspaceName = Model.WorkspaceName;
+    var jsonUrl = Url.Content($"~/workspace-files/{workspaceName}/{Model.BaseName}.json");
+    var audioUrl = Url.Content($"~/workspace-files/{workspaceName}/{Model.BaseName}.mp3");
+}
+
+@section Styles {
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            font-size: 20px;
+            background-color: white;
+            color: black;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #playerContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #f7f7f7;
+            padding: 10px 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 999;
+        }
+
+        #playerContainer .controls {
+            display: inline-block;
+            margin-left: 15px;
+        }
+
+        #contentContainer {
+            position: absolute;
+            top: 100px;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .paragraph-highlight {
+            background-color: #c8ffc8;
+        }
+
+        .sentence-highlight {
+            background-color: rgb(106, 243, 106);
+        }
+
+        .dark-mode {
+            background-color: black;
+            color: #b3b3b3;
+        }
+
+        .dark-mode .paragraph-highlight {
+            background: none;
+            color: #b3b3b3;
+        }
+
+        .dark-mode .sentence-highlight {
+            background: none;
+            color: white;
+        }
+    </style>
+}
+
+<div id="playerContainer">
+    <audio id="audio" controls src="@audioUrl"></audio>
+    <div class="controls">
+        <button id="skipBackBtn">-15s</button>
+        <button id="skipForwardBtn">+15s</button>
+        <label for="speedSlider">Speed:</label>
+        <input id="speedSlider" type="range" min="0.5" max="2" step="0.1" value="1" />
+        <span id="speedValue">1.0x</span>
+        <label for="autoScrollCheck">Auto-Scroll</label>
+        <input type="checkbox" id="autoScrollCheck" checked />
+        <label for="darkModeCheck">Dark Mode</label>
+        <input type="checkbox" id="darkModeCheck" />
+    </div>
+</div>
+
+<div id="contentContainer">
+    <div id="textContainer"></div>
+</div>
+
+@section Scripts {
+    <script>
+        const jsonUrl = "@jsonUrl";
+        const audioUrl = "@audioUrl";
+        const lastAudioPosition = parseFloat("@Model.Progress.LastAudioPosition");
+        const audio = document.getElementById("audio");
+        const textContainer = document.getElementById("textContainer");
+        const skipBackBtn = document.getElementById("skipBackBtn");
+        const skipForwardBtn = document.getElementById("skipForwardBtn");
+        const speedSlider = document.getElementById("speedSlider");
+        const speedValue = document.getElementById("speedValue");
+        const autoScrollCheck = document.getElementById("autoScrollCheck");
+        const darkModeCheck = document.getElementById("darkModeCheck");
+
+        let paragraphs = [];
+        let sentences = [];
+        let paragraphEls = [];
+        let sentenceEls = [];
+        let lastSentenceIndex = -1;
+
+        audio.src = audioUrl;
+        if (!isNaN(lastAudioPosition) && lastAudioPosition > 0) {
+            audio.currentTime = lastAudioPosition;
+        }
+
+        fetch(jsonUrl)
+            .then(res => res.json())
+            .then(data => {
+                paragraphs = data.Paragraphs || [];
+                sentences = data.Sentences || [];
+
+                sentences.sort((a, b) => a.time - b.time);
+
+                buildParagraphsAndSentences(paragraphs, sentences);
+
+                audio.addEventListener("timeupdate", onTimeUpdate);
+                darkModeCheck.addEventListener("change", toggleDarkMode);
+            })
+            .catch(err => console.error("Error loading JSON:", err));
+
+        function buildParagraphsAndSentences(paragraphs, sentences) {
+            paragraphs.forEach(paragraph => {
+                const pIndex = paragraph.ParagraphIndex;
+                const pTag = document.createElement("p");
+                pTag.id = `paragraph-${pIndex}`;
+
+                let paragraphText = paragraph.ParagraphText;
+                const pSentences = sentences.filter(s => s.paragraphIndex === pIndex);
+
+                pSentences.forEach((sentence, sIdx) => {
+                    const marker = `__SENTENCE_${pIndex}_${sIdx}__`;
+                    paragraphText = paragraphText.replace(sentence.value, marker);
+                });
+
+                let finalHTML = paragraphText;
+                pSentences.forEach((sentence, sIdx) => {
+                    const marker = `__SENTENCE_${pIndex}_${sIdx}__`;
+                    const spanHTML = `<span class="sentenceSpan" data-sentence-idx="${sentenceEls.length}">${sentence.value}</span>`;
+                    finalHTML = finalHTML.replace(marker, spanHTML);
+
+                    sentenceEls.push({
+                        time: sentence.time,
+                        paragraphIndex: pIndex,
+                        spanEl: null,
+                    });
+                });
+
+                pTag.innerHTML = finalHTML;
+                textContainer.appendChild(pTag);
+                paragraphEls[pIndex] = pTag;
+            });
+
+            sentenceEls.forEach((obj, i) => {
+                const span = document.querySelector(`.sentenceSpan[data-sentence-idx="${i}"]`);
+                if (span) obj.spanEl = span;
+            });
+        }
+
+        function onTimeUpdate() {
+            const currentTimeMs = audio.currentTime * 1000;
+
+            let currentSentenceIndex = -1;
+            for (let i = 0; i < sentenceEls.length; i++) {
+                if (sentenceEls[i].time <= currentTimeMs) {
+                    currentSentenceIndex = i;
+                } else {
+                    break;
+                }
+            }
+
+            clearHighlights();
+
+            if (currentSentenceIndex === -1) return;
+
+            const { paragraphIndex, spanEl } = sentenceEls[currentSentenceIndex];
+            if (spanEl) spanEl.classList.add("sentence-highlight");
+            if (paragraphEls[paragraphIndex]) {
+                paragraphEls[paragraphIndex].classList.add("paragraph-highlight");
+                if (autoScrollCheck.checked) {
+                    paragraphEls[paragraphIndex].scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                    });
+                }
+            }
+
+            lastSentenceIndex = currentSentenceIndex;
+
+            if (Math.floor(audio.currentTime) % 10 === 0) { // Save every 10 seconds
+              saveProgress();
+            }
+        }
+
+        function clearHighlights() {
+            paragraphEls.forEach(p => p?.classList.remove("paragraph-highlight"));
+            sentenceEls.forEach(obj => obj.spanEl?.classList.remove("sentence-highlight"));
+        }
+
+        function toggleDarkMode() {
+            if (darkModeCheck.checked) {
+                document.body.classList.add("dark-mode");
+            } else {
+                document.body.classList.remove("dark-mode");
+            }
+        }
+
+        function saveProgress() {
+          debugger;
+          const currentTime = audio.currentTime;
+          fetch('/Workspace/SaveProgress', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  WorkspaceName: "@Model.WorkspaceName",
+                  file: "@Model.BaseName",
+                  currentTime: currentTime
+              })
+          });
+        }
+
+        skipBackBtn.addEventListener("click", () => {
+            audio.currentTime = Math.max(0, audio.currentTime - 15);
+        });
+
+        skipForwardBtn.addEventListener("click", () => {
+            audio.currentTime += 15;
+        });
+
+        speedSlider.addEventListener("input", () => {
+            const rate = parseFloat(speedSlider.value);
+            audio.playbackRate = rate;
+            speedValue.textContent = `${rate.toFixed(1)}x`;
+        });
+    </script>
+}

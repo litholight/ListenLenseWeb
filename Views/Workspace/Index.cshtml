@@ -1,0 +1,33 @@
+@model ListenLense.Models.WorkspaceModel
+@{
+    ViewData["Title"] = "Workspace " + Model.Name;
+}
+<h1>Workspace: @Model.Name</h1>
+
+<p>Folder Path: @Model.FolderPath</p>
+
+<h3>Existing Files</h3>
+<ul>
+@foreach (var f in Model.Files)
+{
+    <li>
+        <strong>@f.FileName</strong>
+        <ul>
+            <li>Last Opened: @f.Progress.LastOpened.ToString("g")</li>
+            <li>Last Position: @(f.Progress.LastAudioPosition > 0 
+                ? TimeSpan.FromSeconds(f.Progress.LastAudioPosition).ToString(@"hh\:mm\:ss") 
+                : "00:00:00")</li>
+        </ul>
+        [ <a asp-action="Reader" asp-route-name="@Model.Name" asp-route-file="@f.BaseName">Read/Listen</a> ]
+    </li>
+}
+</ul>
+
+<h3>Upload a new .txt file</h3>
+<form asp-action="UploadFile" asp-controller="Workspace" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="name" value="@Model.Name" />
+    <input type="file" name="txtFile" />
+    <button type="submit">Upload & Convert</button>
+</form>
+
+<p><a asp-controller="Home" asp-action="Index">Back to All Workspaces</a></p>
