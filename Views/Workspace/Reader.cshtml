@@ -80,9 +80,9 @@
         <input id="speedSlider" type="range" min="0.5" max="2" step="0.1" value="1" />
         <span id="speedValue">1.0x</span>
         <label for="autoScrollCheck">Auto-Scroll</label>
-        <input type="checkbox" id="autoScrollCheck" checked />
+        <input type="checkbox" id="autoScrollCheck"/>
         <label for="darkModeCheck">Dark Mode</label>
-        <input type="checkbox" id="darkModeCheck" />
+        <input type="checkbox" id="darkModeCheck"/>
     </div>
 </div>
 
@@ -94,7 +94,9 @@
     <script>
         const jsonUrl = "@jsonUrl";
         const audioUrl = "@audioUrl";
-        const lastAudioPosition = parseFloat("@Model.Progress.LastAudioPosition");
+        const lastAudioPosition = parseFloat("@Model.FileState.LastAudioPosition");
+        const autoscroll = @Model.FileState.Autoscroll.ToString().ToLower(); 
+        const darkMode = @Model.FileState.DarkMode.ToString().ToLower();
         const audio = document.getElementById("audio");
         const textContainer = document.getElementById("textContainer");
         const skipBackBtn = document.getElementById("skipBackBtn");
@@ -115,6 +117,10 @@
             audio.currentTime = lastAudioPosition;
         }
 
+        autoScrollCheck.checked = autoscroll;
+        darkModeCheck.checked = darkMode;
+        toggleDarkMode();
+
         fetch(jsonUrl)
             .then(res => res.json())
             .then(data => {
@@ -126,6 +132,7 @@
                 buildParagraphsAndSentences(paragraphs, sentences);
 
                 audio.addEventListener("timeupdate", onTimeUpdate);
+                autoScrollCheck.addEventListener("change", SaveFileState);
                 darkModeCheck.addEventListener("change", toggleDarkMode);
             })
             .catch(err => console.error("Error loading JSON:", err));
@@ -199,7 +206,7 @@
             lastSentenceIndex = currentSentenceIndex;
 
             if (Math.floor(audio.currentTime) % 10 === 0) { // Save every 10 seconds
-              saveProgress();
+              SaveFileState();
             }
         }
 
@@ -214,18 +221,21 @@
             } else {
                 document.body.classList.remove("dark-mode");
             }
+
+            SaveFileState();
         }
 
-        function saveProgress() {
-          debugger;
+        function SaveFileState() {
           const currentTime = audio.currentTime;
-          fetch('/Workspace/SaveProgress', {
+          fetch('/Workspace/SaveFileState', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                   WorkspaceName: "@Model.WorkspaceName",
                   file: "@Model.BaseName",
-                  currentTime: currentTime
+                  currentTime: currentTime,
+                  autoscroll: autoScrollCheck.checked,
+                  darkMode: darkModeCheck.checked,
               })
           });
         }

@@ -66,29 +66,33 @@ namespace ListenLense.Controllers
             matchingFile.WorkspaceName = name;
 
             // Update the model to include the last progress
-            var progress = _workspaceService.LoadFileProgress(folderPath, file);
+            var progress = _workspaceService.LoadFileState(folderPath, file);
             if (progress != null)
             {
-                matchingFile.Progress = progress;
+                matchingFile.FileState = progress;
             }
 
             return View(matchingFile);
         }
 
-        // POST: /Workspace/SaveProgress
+        // POST: /Workspace/SaveFileState
         [HttpPost]
-        public IActionResult SaveProgress([FromBody] ProgressDto data)
+        public IActionResult SaveFileState([FromBody] ProgressDto data)
         {
             var name = data.WorkspaceName;
             var file = data.File;
             var currentTime = data.CurrentTime;
+            var autoscroll = data.Autoscroll;
+            var darkMode = data.DarkMode;
             var folderPath = _workspaceService.CreateWorkspace(name);
             // load existing progress
-            var progress = _workspaceService.LoadFileProgress(folderPath, file);
-            progress.LastAudioPosition = currentTime;
-            progress.LastOpened = DateTime.Now;
+            var fileState = _workspaceService.LoadFileState(folderPath, file);
+            fileState.LastAudioPosition = currentTime;
+            fileState.LastOpened = DateTime.Now;
+            fileState.Autoscroll = autoscroll;
+            fileState.DarkMode = darkMode;
 
-            _workspaceService.SaveFileProgress(folderPath, file, progress);
+            _workspaceService.SaveFileState(folderPath, file, fileState);
             return Ok();
         }
     }
@@ -98,5 +102,7 @@ namespace ListenLense.Controllers
         public string WorkspaceName { get; set; }
         public string File { get; set; }
         public double CurrentTime { get; set; }
+        public bool Autoscroll { get; set; }
+        public bool DarkMode { get; set; }
     }
 }

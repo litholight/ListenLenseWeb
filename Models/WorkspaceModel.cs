@@ -17,6 +17,6 @@ namespace ListenLense.Models
         public string JsonPath { get; set; } = string.Empty;
         public string WorkspaceName { get; set; } = string.Empty;
 
-        public FileProgressModel Progress { get; set; } = new FileProgressModel();
+        public FileStateModel FileState { get; set; } = new FileStateModel();
     }
 }

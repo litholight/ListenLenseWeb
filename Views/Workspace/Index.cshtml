@@ -13,9 +13,9 @@
     <li>
         <strong>@f.FileName</strong>
         <ul>
-            <li>Last Opened: @f.Progress.LastOpened.ToString("g")</li>
-            <li>Last Position: @(f.Progress.LastAudioPosition > 0 
-                ? TimeSpan.FromSeconds(f.Progress.LastAudioPosition).ToString(@"hh\:mm\:ss") 
+            <li>Last Opened: @f.FileState.LastOpened.ToString("g")</li>
+            <li>Last Position: @(f.FileState.LastAudioPosition > 0 
+                ? TimeSpan.FromSeconds(f.FileState.LastAudioPosition).ToString(@"hh\:mm\:ss") 
                 : "00:00:00")</li>
         </ul>
         [ <a asp-action="Reader" asp-route-name="@Model.Name" asp-route-file="@f.BaseName">Read/Listen</a> ]

@@ -51,7 +51,7 @@ namespace ListenLense.Services
                 var json = Path.Combine(folderPath, baseName + ".json");
 
                 // load or create progress
-                var progressData = LoadFileProgress(folderPath, baseName);
+                var fileStateData = LoadFileState(folderPath, baseName);
 
                 wm.Files.Add(
                     new WorkspaceFileModel
@@ -61,7 +61,7 @@ namespace ListenLense.Services
                         TextPath = txt,
                         AudioPath = mp3,
                         JsonPath = json,
-                        Progress = progressData
+                        FileState = fileStateData
                     }
                 );
             }
@@ -69,58 +69,60 @@ namespace ListenLense.Services
             // For LastAccessed, you might store it in a “workspace.json” or simply compute from the newest file
             wm.LastAccessed = (DateTime)
                 wm
-                    .Files.Select(f => f.Progress?.LastOpened ?? DateTime.MinValue)
+                    .Files.Select(f => f.FileState?.LastOpened ?? DateTime.MinValue)
                     .DefaultIfEmpty(DateTime.MinValue)
                     .Max();
 
             return wm;
         }
 
-        public FileProgressModel LoadFileProgress(string folderPath, string baseName)
+        public FileStateModel LoadFileState(string folderPath, string baseName)
         {
-            // We'll have a single “progress.json” or 1 file per text. Up to you.
-            // For demonstration, let's keep a single “progress.json” in the workspace
+            // We'll have a single “fileState.json” or 1 file per text. Up to you.
+            // For demonstration, let's keep a single “fileState.json” in the workspace
             // that maps file “baseName” => progress object.
 
-            var progressFile = Path.Combine(folderPath, "progress.json");
-            var dict = new Dictionary<string, FileProgressModel>();
+            var fileStateFile = Path.Combine(folderPath, "fileState.json");
+            var dict = new Dictionary<string, FileStateModel>();
 
-            if (File.Exists(progressFile))
+            if (File.Exists(fileStateFile))
             {
-                var json = File.ReadAllText(progressFile);
+                var json = File.ReadAllText(fileStateFile);
                 dict =
-                    JsonSerializer.Deserialize<Dictionary<string, FileProgressModel>>(json)
-                    ?? new Dictionary<string, FileProgressModel>();
+                    JsonSerializer.Deserialize<Dictionary<string, FileStateModel>>(json)
+                    ?? new Dictionary<string, FileStateModel>();
             }
 
             if (!dict.ContainsKey(baseName))
             {
-                dict[baseName] = new FileProgressModel
+                dict[baseName] = new FileStateModel
                 {
                     LastAudioPosition = 0,
-                    LastOpened = DateTime.MinValue
+                    LastOpened = DateTime.MinValue,
+                    Autoscroll = true,
+                    DarkMode = false
                 };
             }
 
             return dict[baseName];
         }
 
-        public void SaveFileProgress(string folderPath, string baseName, FileProgressModel progress)
+        public void SaveFileState(string folderPath, string baseName, FileStateModel fileState)
         {
-            var progressFile = Path.Combine(folderPath, "progress.json");
-            var dict = new Dictionary<string, FileProgressModel>();
+            var fileStateFile = Path.Combine(folderPath, "fileState.json");
+            var dict = new Dictionary<string, FileStateModel>();
 
-            if (File.Exists(progressFile))
+            if (File.Exists(fileStateFile))
             {
-                var json = File.ReadAllText(progressFile);
+                var json = File.ReadAllText(fileStateFile);
                 dict =
-                    JsonSerializer.Deserialize<Dictionary<string, FileProgressModel>>(json)
-                    ?? new Dictionary<string, FileProgressModel>();
+                    JsonSerializer.Deserialize<Dictionary<string, FileStateModel>>(json)
+                    ?? new Dictionary<string, FileStateModel>();
             }
 
-            dict[baseName] = progress;
+            dict[baseName] = fileState;
             File.WriteAllText(
-                progressFile,
+                fileStateFile,
                 JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true })
             );
         }
