@@ -143,7 +143,8 @@
                 const pTag = document.createElement("p");
                 pTag.id = `paragraph-${pIndex}`;
 
-                let paragraphText = paragraph.ParagraphText;
+                // Replace \n with <br> for proper formatting
+                let paragraphText = paragraph.ParagraphText.replace(/\n/g, "<br>");
                 const pSentences = sentences.filter(s => s.paragraphIndex === pIndex);
 
                 pSentences.forEach((sentence, sIdx) => {
