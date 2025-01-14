@@ -143,32 +143,40 @@
                 const pTag = document.createElement("p");
                 pTag.id = `paragraph-${pIndex}`;
 
-                let paragraphText = paragraph.ParagraphText.replace(/\n/g, "<br>");
+                let paragraphText = paragraph.ParagraphText;
                 const pSentences = sentences.filter(s => s.paragraphIndex === pIndex);
 
+                // 1. Replace sentences with markers
                 pSentences.forEach((sentence, sIdx) => {
                     const marker = `__SENTENCE_${pIndex}_${sIdx}__`;
                     paragraphText = paragraphText.replace(sentence.value, marker);
                 });
 
+                // 2. Replace markers with <span> elements for highlighting
                 let finalHTML = paragraphText;
                 pSentences.forEach((sentence, sIdx) => {
                     const marker = `__SENTENCE_${pIndex}_${sIdx}__`;
                     const spanHTML = `<span class="sentenceSpan" data-sentence-idx="${sentenceEls.length}">${sentence.value}</span>`;
                     finalHTML = finalHTML.replace(marker, spanHTML);
 
+                    // Add sentence to the list of sentences with span references
                     sentenceEls.push({
                         time: sentence.time,
                         paragraphIndex: pIndex,
-                        spanEl: null,
+                        spanEl: null, // Will be populated later
                     });
                 });
 
+                // 3. Replace newlines with <br> AFTER highlighting
+                finalHTML = finalHTML.replace(/\n/g, "<br>");
+
+                // 4. Set the final HTML and append the paragraph
                 pTag.innerHTML = finalHTML;
                 textContainer.appendChild(pTag);
                 paragraphEls[pIndex] = pTag;
             });
 
+            // Link sentence span elements after they are inserted into the DOM
             sentenceEls.forEach((obj, i) => {
                 const span = document.querySelector(`.sentenceSpan[data-sentence-idx="${i}"]`);
                 if (span) obj.spanEl = span;
