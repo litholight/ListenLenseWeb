@@ -74,8 +74,8 @@
 <div id="playerContainer">
     <audio id="audio" controls src="@audioUrl"></audio>
     <div class="controls">
-        <button id="skipBackBtn">-15s</button>
-        <button id="skipForwardBtn">+15s</button>
+        <button id="skipBackBtn">Previous Sentence</button>
+        <button id="skipForwardBtn">Next Sentence</button>
         <label for="speedSlider">Speed:</label>
         <input id="speedSlider" type="range" min="0.5" max="2" step="0.1" value="1" />
         <span id="speedValue">1.0x</span>
@@ -143,7 +143,6 @@
                 const pTag = document.createElement("p");
                 pTag.id = `paragraph-${pIndex}`;
 
-                // Replace \n with <br> for proper formatting
                 let paragraphText = paragraph.ParagraphText.replace(/\n/g, "<br>");
                 const pSentences = sentences.filter(s => s.paragraphIndex === pIndex);
 
@@ -242,12 +241,64 @@
         }
 
         skipBackBtn.addEventListener("click", () => {
-            audio.currentTime = Math.max(0, audio.currentTime - 15);
+            skipToPreviousSentence();
         });
 
         skipForwardBtn.addEventListener("click", () => {
-            audio.currentTime += 15;
+            skipToNextSentence();
         });
+
+        function skipToPreviousSentence() {
+            const currentTimeMs = audio.currentTime * 1000;
+
+            let currentSentenceIndex = -1;
+            for (let i = 0; i < sentenceEls.length; i++) {
+                if (sentenceEls[i].time <= currentTimeMs) {
+                    currentSentenceIndex = i;
+                } else {
+                    break;
+                }
+            }
+
+            if (currentSentenceIndex > 0) {
+                const previousSentence = sentenceEls[currentSentenceIndex - 1];
+                audio.currentTime = previousSentence.time / 1000;
+                highlightSentence(previousSentence);
+            }
+        }
+
+        function skipToNextSentence() {
+            const currentTimeMs = audio.currentTime * 1000;
+
+            let currentSentenceIndex = -1;
+            for (let i = 0; i < sentenceEls.length; i++) {
+                if (sentenceEls[i].time <= currentTimeMs) {
+                    currentSentenceIndex = i;
+                } else {
+                    break;
+                }
+            }
+
+            if (currentSentenceIndex < sentenceEls.length - 1) {
+                const nextSentence = sentenceEls[currentSentenceIndex + 1];
+                audio.currentTime = nextSentence.time / 1000;
+                highlightSentence(nextSentence);
+            }
+        }
+
+        function highlightSentence(sentence) {
+            clearHighlights();
+
+            const { paragraphIndex, spanEl } = sentence;
+            if (spanEl) spanEl.classList.add("sentence-highlight");
+            if (paragraphEls[paragraphIndex]) {
+                paragraphEls[paragraphIndex].classList.add("paragraph-highlight");
+                paragraphEls[paragraphIndex].scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                });
+            }
+        }
 
         speedSlider.addEventListener("input", () => {
             const rate = parseFloat(speedSlider.value);
