@@ -8,7 +8,7 @@ builder.Services.AddControllersWithViews();
 
 // 2) Register custom services
 builder.Services.AddSingleton<WorkspaceService>();
-builder.Services.AddSingleton<PollyService>();
+builder.Services.AddSingleton<GoogleTTSService>();
 
 var app = builder.Build();
 

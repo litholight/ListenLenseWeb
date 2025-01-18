@@ -7,12 +7,15 @@ namespace ListenLense.Controllers
     public class WorkspaceController : Controller
     {
         private readonly WorkspaceService _workspaceService;
-        private readonly PollyService _pollyService;
+        private readonly GoogleTTSService _googleService;
 
-        public WorkspaceController(WorkspaceService workspaceService, PollyService pollyService)
+        public WorkspaceController(
+            WorkspaceService workspaceService,
+            GoogleTTSService googleService
+        )
         {
             _workspaceService = workspaceService;
-            _pollyService = pollyService;
+            _googleService = googleService;
         }
 
         // GET: /Workspace/Index?name=MyFirstWorkspace
@@ -43,8 +46,7 @@ namespace ListenLense.Controllers
                 {
                     await txtFile.CopyToAsync(fs);
                 }
-                // Now process with Polly
-                await _pollyService.ProcessTextFileAsync(filePath, folderPath);
+                await _googleService.ProcessTextFileAsync(filePath, folderPath);
             }
 
             return RedirectToAction("Index", new { name });
